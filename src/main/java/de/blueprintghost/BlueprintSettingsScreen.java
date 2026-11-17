@@ -8,7 +8,7 @@ import net.minecraft.client.gui.components.CycleButton;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
-/** Einstellungsmenü (Taste K oder /bp settings). */
+/** Einstellungsmenü (Standard-Taste K oder /bp settings). */
 public final class BlueprintSettingsScreen extends Screen {
 	private final Screen parent;
 	private Button layerDown;

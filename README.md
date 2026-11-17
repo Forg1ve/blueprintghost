@@ -12,9 +12,13 @@ und im Spiel siehst du als Geister-Blöcke, welcher Block wohin muss.
 ## Installation in Lunar Client
 
 1. Lunar Launcher öffnen → Version **26.3** → Loader **Fabric** wählen.
-2. Die `.jar` (selbst gebaut unter `build/libs/` oder aus dem *Actions*-Tab → letzter Build → *Artifacts*) in den Mod-Ordner kopieren:
-   `%USERPROFILE%\.lunarclient\profiles\26\mods\fabric-26.3\`
-   (Fabric API ist dort bereits vorhanden.)
+2. Die `.jar` (aus den [Releases](https://github.com/Forg1ve/blueprintghost/releases), selbst gebaut unter `build/libs/`
+   oder aus dem *Actions*-Tab → letzter Build → *Artifacts*) in den Mod-Ordner kopieren:
+   - **Windows:** `%USERPROFILE%\.lunarclient\profiles\26\mods\fabric-26.3\`
+   - **macOS:** `~/.lunarclient/profiles/26/mods/fabric-26.3/`
+     (im Finder: *Gehe zu → Gehe zum Ordner …* ⇧⌘G, Pfad einfügen – der Ordner ist versteckt)
+
+   Fabric API ist dort bereits vorhanden. Nur **eine** BlueprintGhost-Version in den Ordner legen.
 3. Spiel starten. In der Mod-Liste sollte „BlueprintGhost“ auftauchen.
 
 ## Benutzung
@@ -23,7 +27,7 @@ und im Spiel siehst du als Geister-Blöcke, welcher Block wohin muss.
 |---|---|
 | `/bp load <URL>` | Bauplan herunterladen und laden. Die Ecke landet an deinen Füßen. |
 | `/bp load <Datei>` | Bauplan aus dem Ordner laden (Tab ergänzt Dateinamen) |
-| `/bp list` / `/bp folder` | Baupläne anzeigen / Ordner öffnen (`.minecraft/config/blueprintghost`) |
+| `/bp list` / `/bp folder` | Baupläne anzeigen / Bauplan-Ordner im Explorer bzw. Finder öffnen |
 | `/bp here` | Bauplan an deine aktuelle Position verschieben |
 | `/bp move <dx> <dy> <dz>` | Verschieben, z.B. `/bp move 0 -1 0` |
 | `/bp pos <x> <y> <z>` | Ecke auf feste Koordinaten setzen |
@@ -40,10 +44,16 @@ und im Spiel siehst du als Geister-Blöcke, welcher Block wohin muss.
 | `/bp alpha <10-100>` / `/bp radius <4-512>` | Deckkraft / Sichtweite |
 | `/bp toggle`, `/bp info`, `/bp clear` | `clear` entfernt das aktuelle Projekt |
 
-**Tasten** (änderbar unter Optionen → Steuerung → BlueprintGhost):
-Alle Tasten lassen sich direkt im Menü unter **Einstellungen → Tastenbelegung …** ändern (oder in den Minecraft-Steuerungsoptionen).
+**Tasten** – alle änderbar im Menü unter **Einstellungen → Tastenbelegung …** (oder in den Minecraft-Steuerungsoptionen):
 
-`K` Einstellungen · `N` ein/aus · `Bild ↑`/`Bild ↓` Ebene manuell wechseln · `Pos1` ganzer Bauplan ⇄ Ebene für Ebene
+| Aktion | Windows/Linux | macOS |
+|---|---|---|
+| Einstellungen öffnen | `K` | `K` |
+| Bauplan ein/aus | `N` | `N` |
+| Ebene hoch / runter | `Bild ↑` / `Bild ↓` | `↑` / `↓` (Pfeiltasten) |
+| Ganzer Bauplan ⇄ Ebene für Ebene | `Pos1` | `J` |
+
+Auf dem Mac werden Pfeiltasten und `J` verwendet, weil Mac-Tastaturen meist kein Bild↑/Bild↓/Pos1 haben.
 
 **Ebene für Ebene:** Es wird nur eine Ebene gezeigt. Im Modus *automatisch* springt die Anzeige zur nächsten
 Ebene, sobald die aktuelle fertig ist (mit Meldung und Ton). Das HUD zeigt „Ebene 5/114 – noch 23/80“.
@@ -77,10 +87,22 @@ Seite), die Datei im Browser laden und in den Ordner (`/bp folder`) legen.
 
 ## Selbst bauen
 
+Benötigt ein **JDK 25** (z.B. [Temurin](https://adoptium.net)).
+
+Windows:
 ```
 set JAVA_HOME=<Pfad zu JDK 25>
 gradlew build
 ```
+
+macOS / Linux:
+```
+export JAVA_HOME=$(/usr/libexec/java_home -v 25)   # macOS; unter Linux Pfad zum JDK
+./gradlew build
+```
+
+Die fertige Datei liegt danach in `build/libs/`. GitHub baut die Mod bei jedem Push automatisch auf
+Linux, Windows **und macOS**.
 
 ## Automatischer Bildtest
 

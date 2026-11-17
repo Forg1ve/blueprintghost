@@ -200,7 +200,7 @@ public final class BlueprintCommands {
 			{"/bp move <dx> <dy> <dz>", "Bauplan verschieben"},
 			{"/bp rotate [rechts|links|180]", "Bauplan drehen"},
 			{"/bp mirror <x|z|aus>", "Bauplan spiegeln"},
-			{"/bp settings", "Einstellungsmenü öffnen (Taste K)"},
+			{"/bp settings", "Einstellungsmenü öffnen (Taste " + BlueprintGhostClient.keyName(BlueprintGhostClient.settingsKey()) + ")"},
 			{"/bp projects | switch <name> | remove <name>", "Projekte verwalten"},
 			{"/bp hud <an|aus|verschieben|reset>", "Infoleiste oben links"},
 			{"/bp view <ganz|ebenen>", "Ganzer Bauplan oder Ebene für Ebene"},
@@ -319,7 +319,7 @@ public final class BlueprintCommands {
 		BlueprintSession s = BlueprintSession.INSTANCE;
 		s.layerByLayer = layered;
 		s.applyViewMode();
-		ok(c, layered ? "Ansicht: Ebene für Ebene" + (s.layerFollowAuto ? " (automatisch)." : " (manuell, Bild↑/Bild↓).") : "Ansicht: ganzer Bauplan.");
+		ok(c, layered ? "Ansicht: Ebene für Ebene" + (s.layerFollowAuto ? " (automatisch)." : " (manuell, " + BlueprintGhostClient.layerKeysText() + ").") : "Ansicht: ganzer Bauplan.");
 		return 1;
 	}
 

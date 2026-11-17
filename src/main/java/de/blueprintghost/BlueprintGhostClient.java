@@ -12,12 +12,27 @@ import net.minecraft.resources.Identifier;
 
 public final class BlueprintGhostClient implements ClientModInitializer {
 	public static final String MOD_ID = "blueprintghost";
+	/** Mac-Tastaturen haben meist kein Bild↑/Bild↓/Pos1 -> dort Pfeiltasten und J als Standard. */
+	public static final boolean MAC = System.getProperty("os.name", "").toLowerCase(java.util.Locale.ROOT).contains("mac");
 
 	private static KeyMapping toggleKey;
 	private static KeyMapping layerUpKey;
 	private static KeyMapping layerDownKey;
 	private static KeyMapping layerAutoKey;
 	private static KeyMapping settingsKey;
+
+	/** Aktuell belegte Taste als lesbarer Name, z.B. "K" oder "Page Up". */
+	public static String keyName(KeyMapping key) {
+		return key == null ? "?" : key.isUnbound() ? "—" : key.getTranslatedKeyMessage().getString();
+	}
+
+	public static KeyMapping settingsKey() {
+		return settingsKey;
+	}
+
+	public static String layerKeysText() {
+		return keyName(layerUpKey) + "/" + keyName(layerDownKey);
+	}
 
 	/** Alle Tasten dieser Mod, in der Reihenfolge fürs Menü. */
 	public static java.util.List<KeyMapping> keys() {
@@ -28,9 +43,9 @@ public final class BlueprintGhostClient implements ClientModInitializer {
 	public void onInitializeClient() {
 		KeyMapping.Category category = KeyMapping.Category.register(Identifier.fromNamespaceAndPath(MOD_ID, "main"));
 		toggleKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.blueprintghost.toggle", InputConstants.KEY_N, category));
-		layerUpKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.blueprintghost.layer_up", InputConstants.KEY_PAGEUP, category));
-		layerDownKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.blueprintghost.layer_down", InputConstants.KEY_PAGEDOWN, category));
-		layerAutoKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.blueprintghost.layer_auto", InputConstants.KEY_HOME, category));
+		layerUpKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.blueprintghost.layer_up", MAC ? InputConstants.KEY_UP : InputConstants.KEY_PAGEUP, category));
+		layerDownKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.blueprintghost.layer_down", MAC ? InputConstants.KEY_DOWN : InputConstants.KEY_PAGEDOWN, category));
+		layerAutoKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.blueprintghost.layer_auto", MAC ? InputConstants.KEY_J : InputConstants.KEY_HOME, category));
 
 		settingsKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.blueprintghost.settings", InputConstants.KEY_K, category));
 
@@ -53,7 +68,7 @@ public final class BlueprintGhostClient implements ClientModInitializer {
 			}
 			while (layerAutoKey.consumeClick()) {
 				if (session.active()) {
-					// Pos1: zwischen "ganzer Bauplan" und "Ebene für Ebene (automatisch)" wechseln
+					// Pos1 (Mac: J): zwischen "ganzer Bauplan" und "Ebene für Ebene (automatisch)" wechseln
 					boolean toLayers = session.layer == BlueprintSession.LAYER_ALL;
 					session.layerByLayer = toLayers;
 					session.layerFollowAuto = true;

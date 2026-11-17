@@ -144,7 +144,7 @@ public final class BlueprintHotkeysScreen extends Screen {
 			y += ROW;
 		}
 		String hint = selected != null
-			? "Drücke eine Taste …  (Esc = abbrechen, Entf/Rücktaste = Taste entfernen)"
+			? "Drücke eine Taste …  (Esc = abbrechen, " + (BlueprintGhostClient.MAC ? "⌫" : "Entf/Rücktaste") + " = Taste entfernen)"
 			: "Auf eine Taste klicken, um sie zu ändern. Rot = doppelt belegt.";
 		graphics.centeredText(font, hint, width / 2, y + 40, selected != null ? 0xFFFFFF55 : 0xFFAAAAAA);
 	}
