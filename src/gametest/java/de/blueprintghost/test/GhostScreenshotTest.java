@@ -149,7 +149,37 @@ public class GhostScreenshotTest implements FabricClientGameTest {
 				ctx.takeScreenshot("bpg_island_boxes");
 				ctx.runOnClient(mc -> {
 					BlueprintSession.INSTANCE.modelGhosts = true;
-					BlueprintSession.INSTANCE.clear();
+					BlueprintSession.INSTANCE.markDirty();
+				});
+
+				// --- Projekte & Infoleiste
+				ctx.setScreen(() -> new de.blueprintghost.BlueprintSettingsScreen(null));
+				ctx.waitTicks(5);
+				ctx.takeScreenshot("bpg_settings_full");
+				ctx.setScreen(() -> new de.blueprintghost.ProjectsScreen(null));
+				ctx.waitTicks(5);
+				ctx.takeScreenshot("bpg_projects");
+				ctx.setScreen(() -> new de.blueprintghost.HudPositionScreen(null));
+				ctx.waitTicks(5);
+				ctx.clickScreenButton("Oben rechts ↗");
+				ctx.waitTicks(5);
+				ctx.takeScreenshot("bpg_hud_editor");
+				ctx.setScreen(() -> null);
+				// zurück zum Testhaus wechseln (liegt im Speicher)
+				ctx.runOnClient(mc -> BlueprintSession.INSTANCE.switchTo(0, msg -> {
+					throw new AssertionError(msg);
+				}, () -> {
+				}));
+				tpLook(sp, houseOrigin.offset(-3, 2, -8), -40F, 15F);
+				ctx.waitTicks(40);
+				String activeName = ctx.computeOnClient(mc -> BlueprintSession.INSTANCE.activeProjectInfo().name
+					+ " projects=" + BlueprintSession.INSTANCE.projects.size());
+				System.out.println("BPGDEBUG after switch: " + activeName);
+				ctx.takeScreenshot("bpg_hud_topright_switched");
+				ctx.runOnClient(mc -> {
+					BlueprintSession.INSTANCE.hudX = -1;
+					BlueprintSession.INSTANCE.hudY = -1;
+					BlueprintSession.INSTANCE.save();
 				});
 			}
 		}

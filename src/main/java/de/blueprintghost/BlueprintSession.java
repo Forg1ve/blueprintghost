@@ -63,6 +63,25 @@ public final class BlueprintSession {
 	/** Im Ebenen-Modus: true = automatisch die unterste unfertige Ebene, false = manuell gewählt. */
 	public boolean layerFollowAuto = true;
 
+	// --- Infoleiste (HUD)
+	public boolean hudEnabled = true;
+	/** Position der Infoleiste als Anteil der Bildschirmgröße (0..1), -1 = Standard (oben links). */
+	public double hudX = -1, hudY = -1;
+
+	// --- Projekte
+	public final java.util.List<Project> projects = new java.util.ArrayList<>();
+	public int activeProject = -1;
+	/** Zuletzt benutzte Baupläne im Speicher, damit Wechseln schnell geht. */
+	private final java.util.Map<String, Blueprint> blueprintCache = new java.util.LinkedHashMap<>(8, 0.75F, true) {
+		@Override
+		protected boolean removeEldestEntry(java.util.Map.Entry<String, Blueprint> eldest) {
+			return size() > 3;
+		}
+	};
+	private boolean loading;
+	/** true, sobald nach einem Neuaufbau ein kompletter Scan durch ist (Fortschrittszahlen gültig). */
+	private boolean statsValid;
+
 	// --- Ebenen-Statistik (für HUD/Organisation)
 	/** Welt-Y der aktuell gezeigten Ebene, oder Integer.MIN_VALUE wenn keine. */
 	public int currentLayerY = Integer.MIN_VALUE;
@@ -101,6 +120,15 @@ public final class BlueprintSession {
 	}
 
 	public void set(Blueprint blueprint, String source, BlockPos origin) {
+		syncActiveProject();
+		int idx = indexOfSource(source);
+		if (idx < 0) {
+			projects.add(new Project(uniqueName(blueprint.name), source));
+			idx = projects.size() - 1;
+		}
+		activeProject = idx;
+		projects.get(idx).manualLayer = -1;
+		blueprintCache.put(source, blueprint);
 		this.blueprint = blueprint;
 		this.source = source;
 		this.origin = origin;
@@ -108,11 +136,149 @@ public final class BlueprintSession {
 		this.mirror = Mirror.NONE;
 		this.visible = true;
 		this.lastAutoLayerY = Integer.MIN_VALUE;
+		if (layer >= 0) {
+			layer = LAYER_AUTO; // manuelle Ebene gehört zum alten Projekt
+		}
 		applyViewMode();
 		rebuild();
 	}
 
-	public void clear() {
+	// ------------------------------------------------------------ Projekte
+
+	public Project activeProjectInfo() {
+		return activeProject >= 0 && activeProject < projects.size() ? projects.get(activeProject) : null;
+	}
+
+	private int indexOfSource(String src) {
+		for (int i = 0; i < projects.size(); i++) {
+			if (projects.get(i).source.equals(src)) {
+				return i;
+			}
+		}
+		return -1;
+	}
+
+	public int indexOfName(String name) {
+		for (int i = 0; i < projects.size(); i++) {
+			if (projects.get(i).name.equalsIgnoreCase(name)) {
+				return i;
+			}
+		}
+		return -1;
+	}
+
+	private String uniqueName(String base) {
+		String name = base == null || base.isBlank() ? "Projekt" : base.replace(' ', '_');
+		String candidate = name;
+		for (int n = 2; indexOfName(candidate) >= 0; n++) {
+			candidate = name + "_" + n;
+		}
+		return candidate;
+	}
+
+	/** Schreibt den aktuellen Zustand ins aktive Projekt. */
+	private void syncActiveProject() {
+		Project p = activeProjectInfo();
+		if (p == null || blueprint == null) {
+			return;
+		}
+		p.x = origin.getX();
+		p.y = origin.getY();
+		p.z = origin.getZ();
+		p.rotation = rotation.name();
+		p.mirror = mirror.name();
+		p.manualLayer = layer >= 0 ? layer : -1;
+		if (statsValid) {
+			p.total = blueprint.size();
+			p.done = countCorrect;
+		}
+	}
+
+	public boolean isLoading() {
+		return loading;
+	}
+
+	/** Wechselt zu einem anderen Projekt. Lädt den Bauplan im Hintergrund, wenn er nicht im Speicher ist. */
+	public void switchTo(int index, java.util.function.Consumer<String> onError, Runnable onDone) {
+		if (index < 0 || index >= projects.size() || loading) {
+			return;
+		}
+		if (index == activeProject && blueprint != null) {
+			onDone.run();
+			return;
+		}
+		syncActiveProject();
+		Project target = projects.get(index);
+		Blueprint cached = blueprintCache.get(target.source);
+		if (cached != null) {
+			activate(index, cached);
+			onDone.run();
+			return;
+		}
+		loading = true;
+		Minecraft mc = Minecraft.getInstance();
+		java.util.concurrent.CompletableFuture
+			.supplyAsync(() -> {
+				try {
+					return SchematicReader.read(BlueprintFiles.resolveLocalOnly(target.source));
+				} catch (IOException e) {
+					throw new java.util.concurrent.CompletionException(e);
+				}
+			}, net.minecraft.util.Util.ioPool())
+			.whenComplete((bp, error) -> mc.execute(() -> {
+				loading = false;
+				if (error != null) {
+					Throwable cause = error.getCause() != null ? error.getCause() : error;
+					onError.accept("Projekt „" + target.name + "“ konnte nicht geladen werden: " + cause.getMessage());
+					return;
+				}
+				blueprintCache.put(target.source, bp);
+				activate(index, bp);
+				onDone.run();
+			}));
+	}
+
+	private void activate(int index, Blueprint bp) {
+		Project p = projects.get(index);
+		activeProject = index;
+		blueprint = bp;
+		source = p.source;
+		origin = new BlockPos(p.x, p.y, p.z);
+		try {
+			rotation = Rotation.valueOf(p.rotation);
+			mirror = Mirror.valueOf(p.mirror);
+		} catch (IllegalArgumentException e) {
+			rotation = Rotation.NONE;
+			mirror = Mirror.NONE;
+		}
+		lastAutoLayerY = Integer.MIN_VALUE;
+		lowestIncompleteY = Integer.MIN_VALUE;
+		countCorrect = countMissing = countWrong = 0;
+		if (layerByLayer && !layerFollowAuto) {
+			layer = p.manualLayer >= 0 ? Math.min(p.manualLayer, bp.sizeY - 1) : 0;
+		}
+		applyViewMode();
+		rebuild();
+	}
+
+	/** Entfernt ein Projekt aus der Liste (die Datei bleibt erhalten). */
+	public void removeProject(int index) {
+		if (index < 0 || index >= projects.size()) {
+			return;
+		}
+		if (index == activeProject) {
+			clearDisplay();
+			activeProject = -1;
+		} else if (index < activeProject) {
+			activeProject--;
+		}
+		projects.remove(index);
+		save();
+	}
+
+	/** Blendet das aktuelle Projekt aus, ohne es aus der Liste zu löschen. */
+	public void clearDisplay() {
+		syncActiveProject();
 		blueprint = null;
 		source = null;
 		worldStates = new BlockState[0];
@@ -122,7 +288,16 @@ public final class BlueprintSession {
 		boxIndices = new int[0];
 		targetPos = null;
 		GhostRenderer.publish(null);
-		save();
+	}
+
+	/** Entfernt das aktive Projekt. */
+	public void clear() {
+		if (activeProject >= 0) {
+			removeProject(activeProject);
+		} else {
+			clearDisplay();
+			save();
+		}
 	}
 
 	public void markDirty() {
@@ -213,6 +388,7 @@ public final class BlueprintSession {
 			}
 		}
 		tickCounter = 0;
+		statsValid = false;
 		scanCursor = 0;
 		passCorrect = passMissing = passWrong = 0;
 		passLowest = Integer.MAX_VALUE;
@@ -293,6 +469,7 @@ public final class BlueprintSession {
 				countCorrect = passCorrect;
 				countMissing = passMissing;
 				countWrong = passWrong;
+				statsValid = true;
 				lowestIncompleteY = passLowest == Integer.MAX_VALUE ? Integer.MIN_VALUE : passLowest;
 				passCorrect = passMissing = passWrong = 0;
 				passLowest = Integer.MAX_VALUE;
@@ -554,19 +731,32 @@ public final class BlueprintSession {
 		if (layer >= 0) {
 			p.setProperty("manualLayer", Integer.toString(layer));
 		}
-		if (blueprint != null && source != null) {
-			p.setProperty("source", source);
-			p.setProperty("x", Integer.toString(origin.getX()));
-			p.setProperty("y", Integer.toString(origin.getY()));
-			p.setProperty("z", Integer.toString(origin.getZ()));
-			p.setProperty("rotation", rotation.name());
-			p.setProperty("mirror", mirror.name());
-		}
+		p.setProperty("hud", Boolean.toString(hudEnabled));
+		p.setProperty("hudX", Double.toString(hudX));
+		p.setProperty("hudY", Double.toString(hudY));
 		try (Writer w = Files.newBufferedWriter(stateFile())) {
 			p.store(w, "BlueprintGhost");
 		} catch (IOException ignored) {
 		}
+		saveProjects();
 	}
+
+	private static Path projectsFile() {
+		return BlueprintFiles.folder().resolve("projects.json");
+	}
+
+	private void saveProjects() {
+		syncActiveProject();
+		com.google.gson.JsonObject root = new com.google.gson.JsonObject();
+		root.addProperty("active", activeProject);
+		root.add("projects", GSON.toJsonTree(projects));
+		try (Writer w = Files.newBufferedWriter(projectsFile())) {
+			GSON.toJson(root, w);
+		} catch (IOException ignored) {
+		}
+	}
+
+	private static final com.google.gson.Gson GSON = new com.google.gson.GsonBuilder().setPrettyPrinting().create();
 
 	private void load() {
 		Path file = stateFile();
@@ -587,26 +777,62 @@ public final class BlueprintSession {
 			layerFollowAuto = !"manual".equals(p.getProperty("layerFollow"));
 			int manual = Integer.parseInt(p.getProperty("manualLayer", "-1"));
 			layer = !layerByLayer ? LAYER_ALL : layerFollowAuto || manual < 0 ? LAYER_AUTO : manual;
+			hudEnabled = !"false".equals(p.getProperty("hud"));
+			hudX = Double.parseDouble(p.getProperty("hudX", "-1"));
+			hudY = Double.parseDouble(p.getProperty("hudY", "-1"));
 		} catch (NumberFormatException ignored) {
 		}
-		String src = p.getProperty("source");
-		if (src == null) {
+
+		// Projektliste laden
+		projects.clear();
+		activeProject = -1;
+		Path pf = projectsFile();
+		if (Files.isRegularFile(pf)) {
+			try (Reader r = Files.newBufferedReader(pf)) {
+				com.google.gson.JsonObject root = GSON.fromJson(r, com.google.gson.JsonObject.class);
+				Project[] list = GSON.fromJson(root.get("projects"), Project[].class);
+				if (list != null) {
+					for (Project pr : list) {
+						if (pr != null && pr.source != null) {
+							projects.add(pr);
+						}
+					}
+				}
+				activeProject = root.has("active") ? root.get("active").getAsInt() : -1;
+			} catch (Exception ignored) {
+			}
+		} else if (p.getProperty("source") != null) {
+			// Umstieg von Version 1.0/1.1: einzelnes Projekt übernehmen
+			String src = p.getProperty("source");
+			Project pr = new Project(uniqueName(stripName(src)), src);
+			pr.x = Integer.parseInt(p.getProperty("x", "0"));
+			pr.y = Integer.parseInt(p.getProperty("y", "0"));
+			pr.z = Integer.parseInt(p.getProperty("z", "0"));
+			pr.rotation = p.getProperty("rotation", "NONE");
+			pr.mirror = p.getProperty("mirror", "NONE");
+			pr.manualLayer = Integer.parseInt(p.getProperty("manualLayer", "-1"));
+			projects.add(pr);
+			activeProject = 0;
+		}
+		if (activeProject >= projects.size()) {
+			activeProject = projects.isEmpty() ? -1 : 0;
+		}
+		Project current = activeProjectInfo();
+		if (current == null) {
 			return;
 		}
 		try {
-			Path path = BlueprintFiles.resolveLocalOnly(src);
-			Blueprint bp = SchematicReader.read(path);
-			this.blueprint = bp;
-			this.source = src;
-			this.origin = new BlockPos(Integer.parseInt(p.getProperty("x", "0")), Integer.parseInt(p.getProperty("y", "0")), Integer.parseInt(p.getProperty("z", "0")));
-			this.rotation = Rotation.valueOf(p.getProperty("rotation", "NONE"));
-			this.mirror = Mirror.valueOf(p.getProperty("mirror", "NONE"));
-			if (layer >= bp.sizeY) {
-				layer = bp.sizeY - 1;
-			}
-			rebuild();
+			Blueprint bp = SchematicReader.read(BlueprintFiles.resolveLocalOnly(current.source));
+			blueprintCache.put(current.source, bp);
+			activate(activeProject, bp);
 		} catch (Exception ignored) {
-			// Datei verschwunden o.ä. – einfach nichts laden
+			// Datei verschwunden o.ä. – Projekt bleibt in der Liste, wird nur nicht angezeigt
 		}
+	}
+
+	private static String stripName(String path) {
+		String file = Path.of(path).getFileName().toString();
+		int dot = file.lastIndexOf('.');
+		return dot > 0 ? file.substring(0, dot) : file;
 	}
 }

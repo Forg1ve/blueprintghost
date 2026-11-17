@@ -5,9 +5,9 @@ und im Spiel siehst du als Geister-Blöcke, welcher Block wohin muss.
 
 ![Geisterblöcke an der Insel](screenshots/island_mid.png)
 
-| Ebene für Ebene | Einstellungen (Taste K) | Tastenbelegung |
+| Ebene für Ebene | Einstellungen (Taste K) | Projekte |
 |---|---|---|
-| ![Ebene](screenshots/house_layer2.png) | ![Einstellungen](screenshots/settings.png) | ![Tasten](screenshots/hotkeys.png) |
+| ![Ebene](screenshots/house_layer2.png) | ![Einstellungen](screenshots/settings_full.png) | ![Projekte](screenshots/projects.png) |
 
 ## Installation in Lunar Client
 
@@ -29,13 +29,16 @@ und im Spiel siehst du als Geister-Blöcke, welcher Block wohin muss.
 | `/bp pos <x> <y> <z>` | Ecke auf feste Koordinaten setzen |
 | `/bp rotate [rechts\|links\|180]` | Drehen |
 | `/bp mirror <x\|z\|aus>` | Spiegeln |
-| `/bp settings` (Taste `K`) | Einstellungsmenü: Ansicht, Ebene, Darstellung, Deckkraft, Sichtweite |
+| `/bp settings` (Taste `K`) | Einstellungsmenü: Ansicht, Ebene, Darstellung, Deckkraft, Sichtweite, Projekte, Infoleiste, Tasten |
+| `/bp projects` | Alle Projekte anzeigen (anklicken zum Wechseln) |
+| `/bp switch <name>` / `/bp remove <name>` | Projekt wechseln / aus der Liste entfernen |
+| `/bp hud <an\|aus\|verschieben\|reset>` | Infoleiste ein-/ausblenden, verschieben, zurücksetzen |
 | `/bp view <ganz\|ebenen>` | Ganzer Bauplan oder Ebene für Ebene |
 | `/bp layer <auto\|nummer\|hoch\|runter>` | Ebene wählen – `auto` = unterste unfertige |
 | `/bp materials [alle\|ebene]` | Fehlende Blöcke mit Anzahl + Inventar (im Ebenen-Modus: nur aktuelle Ebene) |
 | `/bp style <modell\|kasten>` | Geister als echte Blöcke oder Kästen |
 | `/bp alpha <10-100>` / `/bp radius <4-512>` | Deckkraft / Sichtweite |
-| `/bp toggle`, `/bp info`, `/bp clear` | |
+| `/bp toggle`, `/bp info`, `/bp clear` | `clear` entfernt das aktuelle Projekt |
 
 **Tasten** (änderbar unter Optionen → Steuerung → BlueprintGhost):
 Alle Tasten lassen sich direkt im Menü unter **Einstellungen → Tastenbelegung …** ändern (oder in den Minecraft-Steuerungsoptionen).
@@ -51,6 +54,13 @@ Die Einstellung bleibt gespeichert und gilt auch für neu geladene Baupläne.
 `/bp style kasten` schaltet auf einfache blaue Kästen um, `/bp alpha <10-100>` ändert die Deckkraft,
 `/bp radius <n>` die Sichtweite (bei Rucklern verkleinern).
 Schaust du auf eine Stelle, zeigt das Panel oben links den Block, seine Ausrichtung und ob du ihn in der Hotbar hast.
+
+**Projekte:** Jeder geladene Bauplan wird ein Projekt mit eigener Position, Drehung und Ebene. Über
+*Einstellungen → Projekt* (Liste, Wechseln, Entfernen, neuen Link/Dateinamen laden) oder *Nächstes Projekt ▶*
+wechselst du zwischen ihnen. Alles bleibt nach einem Neustart erhalten.
+
+**Infoleiste:** Unter *Einstellungen → Infoleiste verschieben …* mit der Maus an jede Stelle ziehen oder per Knopf
+in eine Ecke setzen; dort und mit `/bp hud aus` lässt sie sich auch ganz abschalten.
 
 ## Unterstützte Formate
 

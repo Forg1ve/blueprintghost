@@ -24,9 +24,9 @@ public final class BlueprintSettingsScreen extends Screen {
 	@Override
 	protected void init() {
 		BlueprintSession s = BlueprintSession.INSTANCE;
-		int w = 220;
-		int x = width / 2 - w / 2;
-		int y = 38;
+		int w = 200;
+		int x = width / 2 - w - 4;
+		int y = 52;
 		int row = 22;
 
 		// --- Ansicht: ganz / Ebene für Ebene
@@ -116,10 +116,48 @@ public final class BlueprintSettingsScreen extends Screen {
 		});
 		y += row + 4;
 
+		int bottom = y;
+
+		// --- Rechte Spalte: Projekte & Bedienung
+		int rx = width / 2 + 4;
+		int ry = 52;
+		Project current = s.activeProjectInfo();
+		String projectLabel = current != null && s.active() ? current.name : "kein Projekt";
+		if (projectLabel.length() > 22) {
+			projectLabel = projectLabel.substring(0, 21) + "…";
+		}
+		addRenderableWidget(Button.builder(Component.literal("Projekt: " + projectLabel), b -> minecraft.gui.setScreen(new ProjectsScreen(this)))
+			.bounds(rx, ry, w, 20).build())
+			.setTooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal("Projekte wechseln, entfernen oder neu laden")));
+		ry += row;
+		Button next = addRenderableWidget(Button.builder(Component.literal("Nächstes Projekt ▶"), b -> {
+			if (s.projects.size() > 1) {
+				int target = (Math.max(0, s.activeProject) + 1) % s.projects.size();
+				s.switchTo(target, msg -> {
+				}, () -> {
+					if (minecraft.gui.screen() == this) {
+						rebuildWidgets();
+					}
+				});
+			}
+		}).bounds(rx, ry, w, 20).build());
+		next.active = s.projects.size() > 1;
+		ry += row + 4;
+		addRenderableWidget(CycleButton.booleanBuilder(Component.literal("An"), Component.literal("Aus"), s.hudEnabled)
+			.create(rx, ry, w, 20, Component.literal("Infoleiste"), (b, value) -> {
+				s.hudEnabled = value;
+				s.save();
+			}));
+		ry += row;
+		addRenderableWidget(Button.builder(Component.literal("Infoleiste verschieben …"), b -> minecraft.gui.setScreen(new HudPositionScreen(this)))
+			.bounds(rx, ry, w, 20).build());
+		ry += row + 4;
 		addRenderableWidget(Button.builder(Component.literal("Tastenbelegung …"), b -> minecraft.gui.setScreen(new BlueprintHotkeysScreen(this)))
-			.bounds(x, y, w, 20).build());
-		y += row;
-		addRenderableWidget(Button.builder(Component.literal("Fertig"), b -> onClose()).bounds(x, y, w, 20).build());
+			.bounds(rx, ry, w, 20).build());
+		ry += row;
+
+		int fy = Math.max(bottom, ry) + 6;
+		addRenderableWidget(Button.builder(Component.literal("Fertig"), b -> onClose()).bounds(width / 2 - 100, fy, 200, 20).build());
 		refreshLayerWidgets();
 	}
 
@@ -148,10 +186,12 @@ public final class BlueprintSettingsScreen extends Screen {
 	@Override
 	public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
 		super.extractRenderState(graphics, mouseX, mouseY, a);
-		graphics.centeredText(font, title, width / 2, 16, 0xFFFFFFFF);
+		graphics.centeredText(font, title, width / 2, 14, 0xFFFFFFFF);
+		graphics.text(font, "Anzeige", width / 2 - 204, 41, 0xFFFFD54F);
+		graphics.text(font, "Projekte & Bedienung", width / 2 + 4, 41, 0xFFFFD54F);
 		BlueprintSession s = BlueprintSession.INSTANCE;
 		if (s.active()) {
-			graphics.centeredText(font, s.blueprint.name, width / 2, 27, 0xFFAAAAAA);
+			graphics.centeredText(font, s.blueprint.name, width / 2, 25, 0xFFAAAAAA);
 		}
 	}
 

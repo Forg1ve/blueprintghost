@@ -90,6 +90,42 @@ public final class BlueprintCommands {
 				.then(literal("aus").executes(c -> mirror(c, Mirror.NONE)))
 				.then(literal("x").executes(c -> mirror(c, Mirror.FRONT_BACK)))
 				.then(literal("z").executes(c -> mirror(c, Mirror.LEFT_RIGHT))))
+			.then(literal("projects").executes(BlueprintCommands::projects))
+			.then(literal("switch")
+				.then(argument("projekt", StringArgumentType.greedyString())
+					.suggests((c, b) -> SharedSuggestionProvider.suggest(BlueprintSession.INSTANCE.projects.stream().map(p -> p.name), b))
+					.executes(c -> switchProject(c, StringArgumentType.getString(c, "projekt")))))
+			.then(literal("remove")
+				.then(argument("projekt", StringArgumentType.greedyString())
+					.suggests((c, b) -> SharedSuggestionProvider.suggest(BlueprintSession.INSTANCE.projects.stream().map(p -> p.name), b))
+					.executes(c -> {
+						BlueprintSession s = BlueprintSession.INSTANCE;
+						int idx = s.indexOfName(StringArgumentType.getString(c, "projekt").trim());
+						if (idx < 0) {
+							c.getSource().sendError(Component.literal("Projekt nicht gefunden. /bp projects zeigt alle."));
+							return 0;
+						}
+						String name = s.projects.get(idx).name;
+						s.removeProject(idx);
+						ok(c, "Projekt „" + name + "“ entfernt (die Datei bleibt erhalten).");
+						return 1;
+					})))
+			.then(literal("hud")
+				.then(literal("an").executes(c -> hud(c, true)))
+				.then(literal("aus").executes(c -> hud(c, false)))
+				.then(literal("verschieben").executes(c -> {
+					Minecraft mc = Minecraft.getInstance();
+					mc.execute(() -> mc.gui.setScreen(new HudPositionScreen(null)));
+					return 1;
+				}))
+				.then(literal("reset").executes(c -> {
+					BlueprintSession s = BlueprintSession.INSTANCE;
+					s.hudX = s.hudY = -1;
+					s.hudEnabled = true;
+					s.save();
+					ok(c, "Infoleiste zurück oben links.");
+					return 1;
+				})))
 			.then(literal("settings").executes(c -> {
 				openSettings();
 				return 1;
@@ -165,13 +201,15 @@ public final class BlueprintCommands {
 			{"/bp rotate [rechts|links|180]", "Bauplan drehen"},
 			{"/bp mirror <x|z|aus>", "Bauplan spiegeln"},
 			{"/bp settings", "Einstellungsmenü öffnen (Taste K)"},
+			{"/bp projects | switch <name> | remove <name>", "Projekte verwalten"},
+			{"/bp hud <an|aus|verschieben|reset>", "Infoleiste oben links"},
 			{"/bp view <ganz|ebenen>", "Ganzer Bauplan oder Ebene für Ebene"},
 			{"/bp layer <auto|nummer|hoch|runter>", "Ebene wählen"},
 			{"/bp materials [alle|ebene]", "Fehlende Blöcke (gesamt oder aktuelle Ebene)"},
 			{"/bp style <modell|kasten>", "Geister als Blockmodelle oder Kästen"},
 			{"/bp alpha <10-100>", "Deckkraft der Geisterblöcke"},
 			{"/bp radius <4-512>", "Sichtweite der Geisterblöcke"},
-			{"/bp toggle | info | clear", ""},
+			{"/bp toggle | info | clear", "clear = aktuelles Projekt entfernen"},
 		};
 		c.getSource().sendFeedback(Component.literal("— BlueprintGhost —").withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD));
 		for (String[] l : lines) {
@@ -184,10 +222,17 @@ public final class BlueprintCommands {
 
 	private static int load(CommandContext<FabricClientCommandSource> c, String source) {
 		FabricClientCommandSource src = c.getSource();
-		Minecraft mc = src.getClient();
-		BlockPos origin = src.getPlayer().blockPosition();
+		loadInto(source, src.getPlayer().blockPosition(), src::sendFeedback, src::sendError, () -> {
+		});
+		return 1;
+	}
+
+	/** Lädt (und lädt ggf. herunter) einen Bauplan als neues Projekt. Auch vom Projekte-Bildschirm genutzt. */
+	public static void loadInto(String source, BlockPos origin, java.util.function.Consumer<Component> feedback,
+		java.util.function.Consumer<Component> errorOut, Runnable onDone) {
+		Minecraft mc = Minecraft.getInstance();
 		boolean remote = source.trim().toLowerCase().startsWith("http");
-		src.sendFeedback(Component.literal(remote ? "Lade Bauplan herunter…" : "Lade Bauplan…").withStyle(ChatFormatting.GRAY));
+		feedback.accept(Component.literal(remote ? "Lade Bauplan herunter…" : "Lade Bauplan…").withStyle(ChatFormatting.GRAY));
 
 		CompletableFuture.supplyAsync(() -> {
 			try {
@@ -206,20 +251,21 @@ public final class BlueprintCommands {
 				if (cause.getCause() != null && cause.getCause().getMessage() != null) {
 					msg = cause.getCause().getMessage();
 				}
-				src.sendError(Component.literal("Fehler: " + msg));
+				errorOut.accept(Component.literal("Fehler: " + msg));
+				onDone.run();
 				return;
 			}
 			Path file = (Path) result[0];
 			Blueprint bp = (Blueprint) result[1];
 			BlueprintSession.INSTANCE.set(bp, file.toAbsolutePath().toString(), origin);
-			src.sendFeedback(Component.literal("✔ " + bp.name).withStyle(ChatFormatting.GREEN)
+			feedback.accept(Component.literal("✔ " + bp.name).withStyle(ChatFormatting.GREEN)
 				.append(Component.literal(" geladen: " + bp.sizeX + "×" + bp.sizeY + "×" + bp.sizeZ + ", " + bp.size() + " Blöcke.").withStyle(ChatFormatting.GRAY)));
 			if (bp.unknownStates > 0) {
-				src.sendFeedback(Component.literal(bp.unknownStates + " Blocktypen unbekannt (andere Version oder Mod-Blöcke) – werden übersprungen.").withStyle(ChatFormatting.GOLD));
+				feedback.accept(Component.literal(bp.unknownStates + " Blocktypen unbekannt (andere Version oder Mod-Blöcke) – werden übersprungen.").withStyle(ChatFormatting.GOLD));
 			}
-			src.sendFeedback(Component.literal("Die Ecke liegt an deinen Füßen. Mit /bp move, /bp rotate oder /bp here ausrichten.").withStyle(ChatFormatting.GRAY));
+			feedback.accept(Component.literal("Die Ecke liegt an deinen Füßen. Mit /bp move, /bp rotate oder /bp here ausrichten.").withStyle(ChatFormatting.GRAY));
+			onDone.run();
 		}));
-		return 1;
 	}
 
 	private static int list(CommandContext<FabricClientCommandSource> c) {
@@ -274,6 +320,45 @@ public final class BlueprintCommands {
 		s.layerByLayer = layered;
 		s.applyViewMode();
 		ok(c, layered ? "Ansicht: Ebene für Ebene" + (s.layerFollowAuto ? " (automatisch)." : " (manuell, Bild↑/Bild↓).") : "Ansicht: ganzer Bauplan.");
+		return 1;
+	}
+
+	private static int hud(CommandContext<FabricClientCommandSource> c, boolean on) {
+		BlueprintSession.INSTANCE.hudEnabled = on;
+		BlueprintSession.INSTANCE.save();
+		ok(c, on ? "Infoleiste eingeblendet." : "Infoleiste ausgeblendet (/bp hud an zum Einblenden).");
+		return 1;
+	}
+
+	private static int projects(CommandContext<FabricClientCommandSource> c) {
+		BlueprintSession s = BlueprintSession.INSTANCE;
+		if (s.projects.isEmpty()) {
+			c.getSource().sendFeedback(Component.literal("Noch keine Projekte. Lade einen Bauplan mit /bp load <URL oder Datei>.").withStyle(ChatFormatting.GRAY));
+			return 0;
+		}
+		c.getSource().sendFeedback(Component.literal("Projekte (anklicken zum Wechseln):").withStyle(ChatFormatting.AQUA));
+		for (int i = 0; i < s.projects.size(); i++) {
+			Project p = s.projects.get(i);
+			boolean active = i == s.activeProject;
+			String text = (active ? " ▶ " : " • ") + p.name + "  " + p.percent() + "%  (" + p.x + " " + p.y + " " + p.z + ")";
+			c.getSource().sendFeedback(Component.literal(text).withStyle(style -> style
+				.withColor(active ? ChatFormatting.GREEN : ChatFormatting.YELLOW)
+				.withClickEvent(new ClickEvent.RunCommand("/bp switch " + p.name))));
+		}
+		return s.projects.size();
+	}
+
+	private static int switchProject(CommandContext<FabricClientCommandSource> c, String name) {
+		BlueprintSession s = BlueprintSession.INSTANCE;
+		int idx = s.indexOfName(name.trim());
+		if (idx < 0) {
+			c.getSource().sendError(Component.literal("Projekt nicht gefunden. /bp projects zeigt alle."));
+			return 0;
+		}
+		FabricClientCommandSource src = c.getSource();
+		String target = s.projects.get(idx).name;
+		s.switchTo(idx, msg -> src.sendError(Component.literal(msg)),
+			() -> src.sendFeedback(Component.literal("Projekt gewechselt: " + target).withStyle(ChatFormatting.GREEN)));
 		return 1;
 	}
 
