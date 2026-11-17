@@ -1,0 +1,11 @@
+{
+	"schemaVersion": 1,
+	"id": "blueprintghost-test",
+	"version": "1.0.0",
+	"name": "BlueprintGhost Test",
+	"environment": "client",
+	"entrypoints": {
+		"fabric-client-gametest": ["de.blueprintghost.test.GhostScreenshotTest"]
+	},
+	"depends": { "blueprintghost": "*" }
+}

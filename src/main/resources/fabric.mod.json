@@ -1,0 +1,20 @@
+{
+	"schemaVersion": 1,
+	"id": "blueprintghost",
+	"version": "${version}",
+	"name": "BlueprintGhost",
+	"description": "Importiere Baupläne (.litematic, .schem, .nbt) aus dem Internet und sieh im Spiel, welcher Block wohin gehört.",
+	"authors": ["Ali"],
+	"license": "MIT",
+	"icon": "assets/blueprintghost/icon.png",
+	"environment": "client",
+	"entrypoints": {
+		"client": ["de.blueprintghost.BlueprintGhostClient"]
+	},
+	"depends": {
+		"fabricloader": ">=0.17.0",
+		"minecraft": "~26.3",
+		"java": ">=25",
+		"fabric-api": "*"
+	}
+}
