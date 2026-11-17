@@ -5,9 +5,9 @@ und im Spiel siehst du als Geister-Blöcke, welcher Block wohin muss.
 
 ![Geisterblöcke an der Insel](screenshots/island_mid.png)
 
-| Ebene für Ebene | Einstellungen (Taste K) |
-|---|---|
-| ![Ebene](screenshots/house_layer2.png) | ![Einstellungen](screenshots/settings.png) |
+| Ebene für Ebene | Einstellungen (Taste K) | Tastenbelegung |
+|---|---|---|
+| ![Ebene](screenshots/house_layer2.png) | ![Einstellungen](screenshots/settings.png) | ![Tasten](screenshots/hotkeys.png) |
 
 ## Installation in Lunar Client
 
@@ -38,6 +38,8 @@ und im Spiel siehst du als Geister-Blöcke, welcher Block wohin muss.
 | `/bp toggle`, `/bp info`, `/bp clear` | |
 
 **Tasten** (änderbar unter Optionen → Steuerung → BlueprintGhost):
+Alle Tasten lassen sich direkt im Menü unter **Einstellungen → Tastenbelegung …** ändern (oder in den Minecraft-Steuerungsoptionen).
+
 `K` Einstellungen · `N` ein/aus · `Bild ↑`/`Bild ↓` Ebene manuell wechseln · `Pos1` ganzer Bauplan ⇄ Ebene für Ebene
 
 **Ebene für Ebene:** Es wird nur eine Ebene gezeigt. Im Modus *automatisch* springt die Anzeige zur nächsten
