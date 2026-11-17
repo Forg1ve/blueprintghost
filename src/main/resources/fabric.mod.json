@@ -4,8 +4,12 @@
 	"version": "${version}",
 	"name": "BlueprintGhost",
 	"description": "Importiere Baupläne (.litematic, .schem, .nbt) aus dem Internet und sieh im Spiel, welcher Block wohin gehört.",
-	"authors": ["Ali"],
+	"authors": ["Forg1ve"],
 	"license": "MIT",
+	"contact": {
+		"sources": "https://github.com/Forg1ve/blueprintghost",
+		"issues": "https://github.com/Forg1ve/blueprintghost/issues"
+	},
 	"icon": "assets/blueprintghost/icon.png",
 	"environment": "client",
 	"entrypoints": {
