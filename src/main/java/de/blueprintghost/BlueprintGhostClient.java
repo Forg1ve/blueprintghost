@@ -19,6 +19,11 @@ public final class BlueprintGhostClient implements ClientModInitializer {
 	private static KeyMapping layerAutoKey;
 	private static KeyMapping settingsKey;
 
+	/** Alle Tasten dieser Mod, in der Reihenfolge fürs Menü. */
+	public static java.util.List<KeyMapping> keys() {
+		return java.util.List.of(settingsKey, toggleKey, layerUpKey, layerDownKey, layerAutoKey);
+	}
+
 	@Override
 	public void onInitializeClient() {
 		KeyMapping.Category category = KeyMapping.Category.register(Identifier.fromNamespaceAndPath(MOD_ID, "main"));

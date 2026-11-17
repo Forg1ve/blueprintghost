@@ -3,6 +3,6 @@
 	"key.blueprintghost.toggle": "Toggle blueprint",
 	"key.blueprintghost.layer_up": "Layer up",
 	"key.blueprintghost.layer_down": "Layer down",
-	"key.blueprintghost.layer_auto": "Layer: auto / all",
+	"key.blueprintghost.layer_auto": "Whole blueprint / layer by layer",
 	"key.blueprintghost.settings": "Open settings"
 }

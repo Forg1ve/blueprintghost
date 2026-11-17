@@ -26,8 +26,8 @@ public final class BlueprintSettingsScreen extends Screen {
 		BlueprintSession s = BlueprintSession.INSTANCE;
 		int w = 220;
 		int x = width / 2 - w / 2;
-		int y = 40;
-		int row = 24;
+		int y = 38;
+		int row = 22;
 
 		// --- Ansicht: ganz / Ebene für Ebene
 		addRenderableWidget(CycleButton.booleanBuilder(
@@ -60,7 +60,7 @@ public final class BlueprintSettingsScreen extends Screen {
 			s.stepLayer(1);
 			refreshLayerWidgets();
 		}).bounds(x + w - 30, y, 30, 20).build());
-		y += row + 8;
+		y += row + 4;
 
 		// --- Darstellung
 		addRenderableWidget(CycleButton.builder((Boolean v) -> Component.literal(v ? "Echte Blöcke" : "Blaue Kästen"), s.modelGhosts)
@@ -114,8 +114,11 @@ public final class BlueprintSettingsScreen extends Screen {
 				s.save();
 			}
 		});
-		y += row + 8;
+		y += row + 4;
 
+		addRenderableWidget(Button.builder(Component.literal("Tastenbelegung …"), b -> minecraft.gui.setScreen(new BlueprintHotkeysScreen(this)))
+			.bounds(x, y, w, 20).build());
+		y += row;
 		addRenderableWidget(Button.builder(Component.literal("Fertig"), b -> onClose()).bounds(x, y, w, 20).build());
 		refreshLayerWidgets();
 	}

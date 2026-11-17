@@ -66,6 +66,29 @@ public class GhostScreenshotTest implements FabricClientGameTest {
 			ctx.setScreen(() -> new de.blueprintghost.BlueprintSettingsScreen(null));
 			ctx.waitTicks(5);
 			ctx.takeScreenshot("bpg_settings");
+			ctx.clickScreenButton("Tastenbelegung …");
+			ctx.waitTicks(5);
+			ctx.takeScreenshot("bpg_hotkeys");
+			// Umbelegen testen: N -> J, dann zurücksetzen
+			ctx.clickScreenButton("N");
+			ctx.waitTicks(2);
+			ctx.getInput().pressKey(com.mojang.blaze3d.platform.InputConstants.KEY_J);
+			ctx.waitTicks(2);
+			String rebound = ctx.computeOnClient(mc -> de.blueprintghost.BlueprintGhostClient.keys().get(1).getTranslatedKeyMessage().getString());
+			String saved = ctx.computeOnClient(mc -> {
+				try {
+					return java.nio.file.Files.readAllLines(mc.gameDirectory.toPath().resolve("options.txt")).stream()
+						.filter(l -> l.startsWith("key_key.blueprintghost.toggle")).findFirst().orElse("?");
+				} catch (java.io.IOException e) {
+					return "?";
+				}
+			});
+			System.out.println("BPGDEBUG rebound toggle -> " + rebound + " | options.txt: " + saved);
+			if (!"J".equals(rebound)) {
+				throw new AssertionError("Umbelegen fehlgeschlagen: " + rebound);
+			}
+			ctx.clickScreenButton("Alle zurücksetzen");
+			ctx.waitTicks(2);
 			ctx.setScreen(() -> null);
 			ctx.runOnClient(mc -> {
 				BlueprintSession.INSTANCE.layerByLayer = false;
